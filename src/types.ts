@@ -42,6 +42,8 @@ export interface ActiveWorkflow {
   outputFile: string;
   /** Last step number that was saved (for duplicate-save protection) */
   lastSavedStep?: number;
+  /** Optional Convex workflow run id for Option A sync */
+  workflowRunId?: string;
   /** ISO timestamp when workflow started */
   startedAt: string;
 }

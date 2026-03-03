@@ -7,8 +7,10 @@
 import { Type } from "@sinclair/typebox";
 import { readState, writeState } from "../lib/state.ts";
 import { loadStepFile, listStepFiles, resolveStepPath } from "../lib/step-loader.ts";
+import { getWorkflow } from "../lib/workflow-registry.ts";
 import { join, dirname } from "node:path";
 import type { ToolResult } from "../types.ts";
+import { syncWorkflowProgress } from "../lib/convex-sync.ts";
 
 export const name = "bmad_load_step";
 export const description =
@@ -94,6 +96,11 @@ export async function execute(
       active.outputFile = resolveStepPath(stepData.outputFile, vars);
     }
     await writeState(projectPath, state);
+    await syncWorkflowProgress({
+      workflowId: active.workflowRunId,
+      currentStep: active.currentStep,
+      totalSteps: active.totalSteps,
+    });
 
     const stepLabel = active.totalSteps
       ? `${stepData.stepNumber} of ${active.totalSteps}`
@@ -190,6 +197,11 @@ export async function execute(
     active.outputFile = resolveStepPath(nextStep.outputFile, vars);
   }
   await writeState(projectPath, state);
+  await syncWorkflowProgress({
+    workflowId: active.workflowRunId,
+    currentStep: active.currentStep,
+    totalSteps: active.totalSteps,
+  });
 
   const stepLabel = active.totalSteps
     ? `${nextStep.stepNumber} of ${active.totalSteps}`

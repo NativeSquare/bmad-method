@@ -7,6 +7,7 @@ import { Type } from "@sinclair/typebox";
 import { readState, writeState } from "../lib/state.ts";
 import { getAvailableWorkflows, getWorkflow } from "../lib/workflow-registry.ts";
 import type { BmadPhase, ToolResult } from "../types.ts";
+import { syncWorkflowReady } from "../lib/convex-sync.ts";
 
 export const name = "bmad_complete_workflow";
 export const description =
@@ -19,6 +20,16 @@ export const parameters = Type.Object({
 });
 
 /** Phase progression order */
+
+
+const WORKFLOW_TO_ARTIFACT: Record<string, string> = {
+  "create-product-brief": "product-brief",
+  "create-prd": "prd",
+  "create-architecture": "architecture",
+  "create-epics": "epics",
+  "sprint-planning": "sprint-planning",
+};
+
 const PHASE_ORDER: BmadPhase[] = [
   "analysis",
   "planning",
@@ -71,6 +82,17 @@ export async function execute(
   }
 
   await writeState(params.projectPath, state);
+
+  // Option A sync: mark workflow ready_for_review in Convex (best-effort)
+  const artifactType = WORKFLOW_TO_ARTIFACT[active.id] || active.id;
+  const artifactPath = active.outputFile?.startsWith(params.projectPath)
+    ? active.outputFile.slice(params.projectPath.length + 1)
+    : active.outputFile;
+  await syncWorkflowReady({
+    workflowId: active.workflowRunId,
+    artifactPath: artifactPath || "",
+    artifactType,
+  });
 
   // Suggest next workflows
   const completedIds = state.completedWorkflows.map((w) => w.id);

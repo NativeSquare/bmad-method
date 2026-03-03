@@ -34,14 +34,15 @@ export const parameters = Type.Object({
   mode: Type.Union([Type.Literal("normal"), Type.Literal("yolo")], {
     description: "Execution mode: normal (interactive) or yolo (autonomous)",
   }),
+  workflowRunId: Type.Optional(Type.String({ description: "Optional Convex workflow run id (from Mission Control S2 start)" })),
 });
 
 export async function execute(
   _id: string,
-  params: { projectPath: string; workflow: string; mode: "normal" | "yolo" },
+  params: { projectPath: string; workflow: string; mode: "normal" | "yolo"; workflowRunId?: string },
   context: { bmadMethodPath: string }
 ): Promise<ToolResult> {
-  const { projectPath, workflow: workflowId, mode } = params;
+  const { projectPath, workflow: workflowId, mode, workflowRunId } = params;
 
   // Validate state
   const state = await readState(projectPath);
@@ -138,6 +139,7 @@ export async function execute(
     totalSteps,
     currentStepFile: firstStepPath,
     outputFile: "", // Will be set by step-01 init
+    workflowRunId,
     startedAt: new Date().toISOString(),
   };
   await writeState(projectPath, state);
