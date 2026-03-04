@@ -1,16 +1,15 @@
 /**
  * bmad_load_step — Load the next step in the active workflow.
  * Resolves the next step file path from the current step's frontmatter.
- * The master should call this after completing each step.
+ * State is read/written via Convex.
  */
 
 import { Type } from "@sinclair/typebox";
-import { readState, writeState } from "../lib/state.ts";
+import { readState, updateProgress } from "../lib/convex-state.ts";
 import { loadStepFile, listStepFiles, resolveStepPath } from "../lib/step-loader.ts";
 import { getWorkflow } from "../lib/workflow-registry.ts";
 import { join, dirname } from "node:path";
 import type { ToolResult } from "../types.ts";
-import { syncWorkflowProgress } from "../lib/convex-sync.ts";
 
 export const name = "bmad_load_step";
 export const description =
@@ -45,6 +44,20 @@ export async function execute(
 
   const active = state.activeWorkflow;
 
+  // Variable resolution map
+  const vars: Record<string, string> = {
+    "project-root": projectPath,
+    project_name: state.projectName,
+    user_name: "User",
+    communication_language: "english",
+    document_output_language: "english",
+    user_skill_level: "expert",
+    output_folder: "_bmad-output",
+    planning_artifacts: join(projectPath, "_bmad-output/planning-artifacts"),
+    implementation_artifacts: join(projectPath, "_bmad-output/implementation-artifacts"),
+    product_knowledge: join(projectPath, "docs"),
+  };
+
   // If a specific step number was requested, find it by number
   if (params.step != null) {
     const workflowDef = getWorkflow(active.id);
@@ -55,7 +68,6 @@ export async function execute(
     }
     const stepsDir = join(context.bmadMethodPath, workflowDef.stepsDir);
     const allSteps = await listStepFiles(stepsDir);
-    // Find the step file matching the requested number
     const targetFile = allSteps.find((f) => {
       const match = f.match(/^step-(?:[a-z]+-)?(\d+)/);
       return match && parseInt(match[1], 10) === params.step;
@@ -69,38 +81,24 @@ export async function execute(
     const targetPath = join(stepsDir, targetFile);
     const stepData = await loadStepFile(targetPath);
 
-    // Resolve variables
-    const vars: Record<string, string> = {
-      "project-root": projectPath,
-      project_name: state.projectName,
-      user_name: "User",
-      communication_language: "english",
-      document_output_language: "english",
-      user_skill_level: "expert",
-      output_folder: "_bmad-output",
-      planning_artifacts: join(projectPath, "_bmad-output/planning-artifacts"),
-      implementation_artifacts: join(projectPath, "_bmad-output/implementation-artifacts"),
-      product_knowledge: join(projectPath, "docs"),
-    };
-
     let resolvedContent = stepData.content;
     for (const [key, value] of Object.entries(vars)) {
       resolvedContent = resolvedContent.replaceAll(`{{${key}}}`, value);
       resolvedContent = resolvedContent.replaceAll(`{${key}}`, value);
     }
 
-    // Update state
-    active.currentStep = stepData.stepNumber;
-    active.currentStepFile = targetPath;
-    if (stepData.outputFile) {
-      active.outputFile = resolveStepPath(stepData.outputFile, vars);
+    // Sync to Convex
+    if (active.workflowRunId) {
+      await updateProgress({
+        workflowId: active.workflowRunId,
+        currentStep: stepData.stepNumber,
+        totalSteps: active.totalSteps,
+        metadata: {
+          currentStepFile: targetPath,
+          outputFile: stepData.outputFile ? resolveStepPath(stepData.outputFile, vars) : undefined,
+        },
+      });
     }
-    await writeState(projectPath, state);
-    await syncWorkflowProgress({
-      workflowId: active.workflowRunId,
-      currentStep: active.currentStep,
-      totalSteps: active.totalSteps,
-    });
 
     const stepLabel = active.totalSteps
       ? `${stepData.stepNumber} of ${active.totalSteps}`
@@ -124,7 +122,7 @@ export async function execute(
   // Load current step to find the next step path
   const currentStep = await loadStepFile(active.currentStepFile);
 
-  // Bug B fix: auto-discover next step if frontmatter has no nextStepFile
+  // Auto-discover next step if frontmatter has no nextStepFile
   let nextStepFileValue = currentStep.nextStepFile;
   if (!nextStepFileValue) {
     const currentDir = dirname(active.currentStepFile);
@@ -144,36 +142,18 @@ export async function execute(
   }
 
   // Resolve the next step path
-  const vars: Record<string, string> = {
-    "project-root": projectPath,
-    project_name: state.projectName,
-    user_name: "User",
-    communication_language: "english",
-    document_output_language: "english",
-    user_skill_level: "expert",
-    output_folder: "_bmad-output",
-    planning_artifacts: join(projectPath, "_bmad-output/planning-artifacts"),
-    implementation_artifacts: join(projectPath, "_bmad-output/implementation-artifacts"),
-    product_knowledge: join(projectPath, "docs"),
-  };
-
   let nextStepPath = resolveStepPath(nextStepFileValue, vars);
 
-  // Bug A fix: resolve relative paths against current step's directory,
-  // not bmadMethodPath. Only fall back to bmadMethodPath for paths that
-  // look like bmm/ or core/ prefixed method-relative paths.
   if (!nextStepPath.startsWith("/")) {
     if (nextStepPath.startsWith("./") || nextStepPath.startsWith("../")) {
       nextStepPath = join(dirname(active.currentStepFile), nextStepPath);
     } else if (nextStepPath.startsWith("bmm/") || nextStepPath.startsWith("core/")) {
       nextStepPath = join(context.bmadMethodPath, nextStepPath);
     } else {
-      // Default: resolve relative to current step directory
       nextStepPath = join(dirname(active.currentStepFile), nextStepPath);
     }
   }
 
-  // Load the next step
   let nextStep;
   try {
     nextStep = await loadStepFile(nextStepPath);
@@ -183,25 +163,24 @@ export async function execute(
     );
   }
 
-  // Resolve variables in step content (handle both {var} and {{var}} patterns)
   let resolvedContent = nextStep.content;
   for (const [key, value] of Object.entries(vars)) {
     resolvedContent = resolvedContent.replaceAll(`{{${key}}}`, value);
     resolvedContent = resolvedContent.replaceAll(`{${key}}`, value);
   }
 
-  // Update state
-  active.currentStep = nextStep.stepNumber;
-  active.currentStepFile = nextStepPath;
-  if (nextStep.outputFile) {
-    active.outputFile = resolveStepPath(nextStep.outputFile, vars);
+  // Sync to Convex
+  if (active.workflowRunId) {
+    await updateProgress({
+      workflowId: active.workflowRunId,
+      currentStep: nextStep.stepNumber,
+      totalSteps: active.totalSteps,
+      metadata: {
+        currentStepFile: nextStepPath,
+        outputFile: nextStep.outputFile ? resolveStepPath(nextStep.outputFile, vars) : undefined,
+      },
+    });
   }
-  await writeState(projectPath, state);
-  await syncWorkflowProgress({
-    workflowId: active.workflowRunId,
-    currentStep: active.currentStep,
-    totalSteps: active.totalSteps,
-  });
 
   const stepLabel = active.totalSteps
     ? `${nextStep.stepNumber} of ${active.totalSteps}`

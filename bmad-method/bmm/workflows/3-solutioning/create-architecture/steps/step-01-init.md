@@ -54,6 +54,9 @@ If no document exists or no `stepsCompleted` in frontmatter:
 
 #### A. Input Document Discovery
 
+**CRITICAL — Existing Project Structure Constraint:**
+Before discovering documents, check the ACTUAL project directory structure. If the project was bootstrapped from a monorepo template (e.g. has `apps/`, `packages/`, `turbo.json`), the architecture MUST conform to the existing structure. Do NOT invent a new directory structure or tech stack — document what already exists and make architectural decisions within that framework. Read the root `package.json`, `turbo.json`, `apps/*/package.json`, and `packages/*/package.json` to understand the current stack. The architecture document should reference the real paths and dependencies already in the project.
+
 Discover and load context documents using smart discovery. Documents can be in the following locations:
 - {planning_artifacts}/**
 - {output_folder}/**

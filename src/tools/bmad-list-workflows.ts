@@ -4,7 +4,7 @@
  */
 
 import { Type } from "@sinclair/typebox";
-import { readState } from "../lib/state.ts";
+import { readState } from "../lib/convex-state.ts";
 import { getAvailableWorkflows } from "../lib/workflow-registry.ts";
 import type { ToolResult } from "../types.ts";
 

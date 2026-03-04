@@ -94,6 +94,33 @@
       5. **Test Quality**: Are tests real assertions or placeholders?
     </action>
 
+
+    <!-- Prototype Visual Compliance (if prototype reference exists in story) -->
+    <check if="story file contains a 'Prototype Reference' or 'Prototype Visual Reference' section">
+      <critical>🎨 PROTOTYPE COMPLIANCE CHECK - Verify visual implementation matches design reference</critical>
+      <action>From the story's prototype reference section, extract:
+        - Expected design tokens (fonts, colors, spacing)
+        - Referenced prototype components/pages
+        - Adaptation notes for native platform
+      </action>
+      <action>For EACH UI component implemented:
+        1. **Typography**: Verify font families, sizes, weights match prototype tokens
+        2. **Colors**: Verify color values match prototype palette (within reason for dark/light mode)
+        3. **Spacing**: Verify padding/margins follow the prototype spacing scale
+        4. **Layout**: Verify component arrangement matches prototype structure
+        5. **Adaptation**: Verify web patterns were properly adapted for target platform
+           - No web-specific hover states left in native code
+           - Native navigation patterns used (not web routing)
+           - Native scroll components used where appropriate
+           - Platform-specific UI conventions respected
+      </action>
+      <action>If visual implementation deviates significantly from prototype:
+        - MEDIUM finding if minor spacing/color differences
+        - HIGH finding if layout structure differs from prototype
+        - CRITICAL finding if prototype was completely ignored
+      </action>
+    </check>
+
     <check if="total_issues_found lt 3">
       <critical>NOT LOOKING HARD ENOUGH - Find more problems!</critical>
       <action>Re-examine code for:

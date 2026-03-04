@@ -214,6 +214,48 @@
     </check>
   </step>
 
+  <step n="2b" goal="Analyze web prototype for visual design reference">
+    <check if="prototype_config exists AND prototype_config.enabled is true">
+      <critical>🎨 PROTOTYPE VISUAL REFERENCE - Extract fonts, colors, and layout ONLY!</critical>
+      <critical>⚠️ The prototype is a WEB app. When building for native, ONLY the visual design language transfers.
+      Interactions, navigation, animations, and platform-specific behavior MUST be adapted to native conventions.</critical>
+
+      <action>Determine if current story involves any UI/frontend work by analyzing story requirements and acceptance criteria</action>
+
+      <check if="story involves UI/frontend work">
+        <action>From prototype source at {prototype_config.path}, identify pages/routes relevant to this story</action>
+        <action>Load ONLY the relevant prototype components and pages (SELECTIVE_LOAD)</action>
+
+        <action>Extract visual design reference:
+          - **Typography:** Font families, sizes, weights, line heights used
+          - **Color palette:** Primary, secondary, accent, background, text colors (hex/rgb values)
+          - **Spacing system:** Padding, margins, gaps — identify the spacing scale
+          - **Layout patterns:** Flex/grid structures, component arrangement, responsive breakpoints
+          - **Component visual style:** Border radius, shadows, elevation patterns
+        </action>
+
+        <action>Identify what MUST BE ADAPTED for native:
+          - Navigation: Replace web routing with React Navigation or native equivalent
+          - Interactions: Replace hover states with press states, add native gestures
+          - Scrolling: Use native scroll components (FlatList, ScrollView) not web scroll
+          - Form controls: Use native inputs, pickers, switches instead of web equivalents
+          - Animations: Use native animation libraries (Reanimated, Moti) not CSS transitions
+          - Platform specifics: Respect iOS/Android design conventions where they differ
+        </action>
+
+        <action>Store extracted design tokens and adaptation notes for inclusion in story file</action>
+      </check>
+
+      <check if="story does NOT involve UI/frontend work">
+        <action>Skip prototype analysis — not relevant for backend/infrastructure stories</action>
+      </check>
+    </check>
+
+    <check if="prototype_config does NOT exist OR prototype_config.enabled is false">
+      <action>Skip prototype analysis — no prototype configured for this project</action>
+    </check>
+  </step>
+
   <step n="3" goal="Architecture analysis for developer guardrails">
     <critical>🏗️ ARCHITECTURE INTELLIGENCE - Extract everything the developer MUST follow!</critical> **ARCHITECTURE DOCUMENT ANALYSIS:** <action>Systematically
     analyze architecture content for story-relevant requirements:</action>
@@ -296,6 +338,17 @@
       <template-output file="{default_output_file}">latest_tech_information</template-output>
     </check>
 
+
+    <!-- Prototype visual reference (conditional) -->
+    <check if="prototype analysis was completed in step 2b">
+      <template-output file="{default_output_file}">prototype_visual_reference</template-output>
+      <action>Include the Prototype Reference section from template with:
+        - Matched prototype routes/pages
+        - Extracted design tokens (fonts, colors, spacing)
+        - Relevant component source paths
+        - Clear adaptation notes for native platform
+      </action>
+    </check>
     <!-- Project context reference -->
     <template-output
       file="{default_output_file}">project_context_reference</template-output>

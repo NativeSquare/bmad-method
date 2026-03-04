@@ -25,6 +25,12 @@ architecture_file: "{planning_artifacts}/architecture.md" # Fallback for constra
 ux_file: "{planning_artifacts}/*ux*.md" # Fallback for UX requirements (if not in epics file)
 story_title: "" # Will be elicited if not derivable
 project_context: "**/project-context.md"
+
+# Web prototype reference (optional) - configured per-project in config.yaml
+# When present, stories involving UI/frontend work will reference the prototype
+# for fonts, colors, and layout ONLY. All other aspects (interactions, navigation,
+# platform conventions) must be adapted for the target platform.
+prototype_config: "{config_source}:prototype"
 default_output_file: "{implementation_artifacts}/{{story_key}}.md"
 
 # Smart input file references - Simplified for enhanced approach
@@ -50,3 +56,7 @@ input_file_patterns:
     whole: "{planning_artifacts}/*epic*.md"
     sharded: "{planning_artifacts}/*epic*/*.md"
     load_strategy: "SELECTIVE_LOAD" # Only load needed epic
+  prototype:
+    description: "Web prototype source — design reference for fonts, colors, and layout ONLY. All interactions, navigation, and platform-specific behavior must be adapted for the target platform (especially native apps)."
+    whole: "{prototype_config.path}/**/*.{tsx,jsx,css,scss}"
+    load_strategy: "SELECTIVE_LOAD" # Only load pages/components relevant to current story's UI

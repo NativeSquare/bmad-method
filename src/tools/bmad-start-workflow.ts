@@ -2,11 +2,11 @@
  * bmad_start_workflow — Start a BMad workflow.
  * Loads the agent persona + first step file + orchestrator rules.
  * Returns a task prompt for the master to pass to sessions_spawn.
- * Also updates state.json with the active workflow.
+ * Registers workflow in Convex (source of truth).
  */
 
 import { Type } from "@sinclair/typebox";
-import { readState, writeState } from "../lib/state.ts";
+import { readState, startWorkflow } from "../lib/convex-state.ts";
 import { getWorkflow } from "../lib/workflow-registry.ts";
 import { loadAgentPersona, formatPersonaPrompt } from "../lib/agent-loader.ts";
 import { findFirstStep, loadStepFile, countSteps } from "../lib/step-loader.ts";
@@ -21,7 +21,7 @@ import type { ToolResult } from "../types.ts";
 
 export const name = "bmad_start_workflow";
 export const description =
-  "Start a BMad workflow. Returns a task prompt to pass directly to sessions_spawn. Updates state.json with the active workflow.";
+  "Start a BMad workflow. Returns a task prompt to pass directly to sessions_spawn. Registers workflow in Convex.";
 
 export const parameters = Type.Object({
   projectPath: Type.String({
@@ -34,17 +34,16 @@ export const parameters = Type.Object({
   mode: Type.Union([Type.Literal("normal"), Type.Literal("yolo")], {
     description: "Execution mode: normal (interactive) or yolo (autonomous)",
   }),
-  workflowRunId: Type.Optional(Type.String({ description: "Optional Convex workflow run id (from Mission Control S2 start)" })),
 });
 
 export async function execute(
   _id: string,
-  params: { projectPath: string; workflow: string; mode: "normal" | "yolo"; workflowRunId?: string },
+  params: { projectPath: string; workflow: string; mode: "normal" | "yolo" },
   context: { bmadMethodPath: string }
 ): Promise<ToolResult> {
-  const { projectPath, workflow: workflowId, mode, workflowRunId } = params;
+  const { projectPath, workflow: workflowId, mode } = params;
 
-  // Validate state
+  // Validate state from Convex
   const state = await readState(projectPath);
   if (!state) {
     return text("Error: Project not initialized. Run `bmad_init_project` first.");
@@ -121,7 +120,6 @@ export async function execute(
       stepContent = step.content;
       totalSteps = await countSteps(stepsDir);
     } else {
-      // Workflow without step files — use instructions from workflow YAML
       stepContent = workflowContent;
       firstStepPath = workflowFilePath;
     }
@@ -129,26 +127,24 @@ export async function execute(
     return text(`Error loading step files for "${workflowId}": ${err.message}`);
   }
 
-  // Update state
-  state.activeWorkflow = {
-    id: workflowId,
-    agentId: workflowDef.agentId,
-    agentName: persona.name,
-    mode,
-    currentStep: 1,
-    totalSteps,
-    currentStepFile: firstStepPath,
-    outputFile: "", // Will be set by step-01 init
-    workflowRunId,
-    startedAt: new Date().toISOString(),
-  };
-  await writeState(projectPath, state);
+  // Register workflow in Convex — this is now the source of truth
+  const workflowRunId = await startWorkflow({
+    projectPath,
+    workflowType: workflowId,
+    totalSteps: totalSteps ?? undefined,
+    metadata: {
+      workflowId,
+      agentId: workflowDef.agentId,
+      agentName: persona.name,
+      mode,
+      currentStepFile: firstStepPath,
+    },
+  });
 
   // Build the full context for the master
   const modeRules = mode === "yolo" ? YOLO_MODE_RULES : NORMAL_MODE_RULES;
 
-  // Variable resolution map for step content
-  // These match the variables from BMad module.yaml + core config
+  // Variable resolution map
   const vars: Record<string, string> = {
     "project-root": projectPath,
     project_name: state.projectName,
@@ -162,7 +158,7 @@ export async function execute(
     product_knowledge: join(projectPath, "docs"),
   };
 
-  // Resolve variables in step content (handle both {var} and {{var}} patterns)
+  // Resolve variables in step content
   let resolvedContent = stepContent;
   for (const [key, value] of Object.entries(vars)) {
     resolvedContent = resolvedContent.replaceAll(`{{${key}}}`, value);
@@ -199,6 +195,7 @@ After completing each step:
     `**Workflow:** ${workflowDef.name} (${workflowId})`,
     `**Mode:** ${mode}`,
     `**Steps:** ${totalSteps ?? "unknown"}`,
+    `**Convex Workflow ID:** ${workflowRunId}`,
     "",
     "---",
     "",

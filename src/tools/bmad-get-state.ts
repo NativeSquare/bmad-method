@@ -1,15 +1,14 @@
 /**
- * bmad_get_state — Return current project state.
- * Used by master agent and dashboard to understand project progress.
+ * bmad_get_state — Read the current BMad project state from Convex.
  */
 
 import { Type } from "@sinclair/typebox";
-import { readState } from "../lib/state.ts";
+import { readState } from "../lib/convex-state.ts";
 import type { ToolResult } from "../types.ts";
 
 export const name = "bmad_get_state";
 export const description =
-  "Get the current BMad project state — active workflow, completed artifacts, phase, and step progress.";
+  "Get the current BMad project state from Convex (phase, active workflow, completed workflows).";
 
 export const parameters = Type.Object({
   projectPath: Type.String({
@@ -23,46 +22,42 @@ export async function execute(
 ): Promise<ToolResult> {
   const state = await readState(params.projectPath);
   if (!state) {
-    return text("Error: Project not initialized. Run `bmad_init_project` first.");
+    return text("Error: Project not initialized or not found in Convex. Run `bmad_init_project` first.");
   }
 
   const lines = [
-    `## BMad Project: ${state.projectName}`,
+    `# BMad Project State: ${state.projectName}`,
     "",
+    `**Path:** \`${state.projectPath}\``,
     `**Phase:** ${state.currentPhase}`,
-    `**Initialized:** ${state.createdAt}`,
+    `**Created:** ${state.createdAt}`,
     "",
   ];
 
   if (state.activeWorkflow) {
-    const w = state.activeWorkflow;
-    const stepLabel = w.totalSteps
-      ? `${w.currentStep} of ${w.totalSteps}`
-      : `${w.currentStep}`;
-    lines.push("### Active Workflow");
-    lines.push(`- **Workflow:** ${w.id}`);
-    lines.push(`- **Agent:** ${w.agentName} (${w.agentId})`);
-    lines.push(`- **Mode:** ${w.mode}`);
-    lines.push(`- **Step:** ${stepLabel}`);
-    lines.push(`- **Output:** ${w.outputFile || "not yet set"}`);
-    lines.push(`- **Started:** ${w.startedAt}`);
+    const aw = state.activeWorkflow;
+    lines.push("## Active Workflow");
+    lines.push(`- **ID:** ${aw.id}`);
+    lines.push(`- **Agent:** ${aw.agentName} (${aw.agentId})`);
+    lines.push(`- **Mode:** ${aw.mode}`);
+    lines.push(`- **Step:** ${aw.currentStep}${aw.totalSteps ? ` of ${aw.totalSteps}` : ""}`);
+    lines.push(`- **Output:** ${aw.outputFile || "not set"}`);
+    lines.push(`- **Started:** ${aw.startedAt}`);
     lines.push("");
   } else {
-    lines.push("### Active Workflow");
-    lines.push("None");
+    lines.push("## Active Workflow");
+    lines.push("None — ready to start a new workflow.");
     lines.push("");
   }
 
   if (state.completedWorkflows.length > 0) {
-    lines.push("### Completed Workflows");
-    for (const w of state.completedWorkflows) {
-      lines.push(
-        `- **${w.id}** — ${w.completedAt} → \`${w.outputFile}\``
-      );
+    lines.push("## Completed Workflows");
+    for (const cw of state.completedWorkflows) {
+      lines.push(`- **${cw.id}** — agent: ${cw.agentId}, output: \`${cw.outputFile || "n/a"}\`, completed: ${cw.completedAt}`);
     }
   } else {
-    lines.push("### Completed Workflows");
-    lines.push("None yet");
+    lines.push("## Completed Workflows");
+    lines.push("None yet.");
   }
 
   return text(lines.join("\n"));

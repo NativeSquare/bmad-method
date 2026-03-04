@@ -152,6 +152,13 @@ You will systematically re-do the entire story creation process, but with a crit
 - **Integration pattern breaks:** Missing data flow requirements that could cause system failures
 - **Deployment failures:** Missing environment requirements that could prevent deployment
 
+
+#### **3.3b Prototype Reference DISASTERS**
+
+- **Missing prototype reference:** Story involves UI work but no prototype section included (when prototype is configured)
+- **Over-copying from prototype:** Story instructs to replicate web interactions/navigation instead of adapting for native
+- **Missing design tokens:** Prototype reference lacks concrete values (hex colors, font sizes, spacing) — forcing dev to guess
+- **Wrong component mapping:** Prototype web components mapped to wrong native equivalents
 #### **3.4 Regression DISASTERS**
 
 - **Breaking changes:** Missing requirements that could break existing functionality

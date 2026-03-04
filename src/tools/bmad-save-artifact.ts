@@ -1,13 +1,13 @@
 /**
  * bmad_save_artifact — Save workflow output to disk.
  * Always appends to the artifact file (multi-step workflows build incrementally).
- * Safeguards prevent double-saves and detect full-doc duplicates.
+ * Syncs outputFile to Convex metadata.
  */
 
 import { Type } from "@sinclair/typebox";
-import { readState, writeState } from "../lib/state.ts";
+import { readState, updateProgress } from "../lib/convex-state.ts";
 import { writeFile, readFile, mkdir } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import type { ToolResult } from "../types.ts";
 
 export const name = "bmad_save_artifact";
@@ -57,7 +57,6 @@ export async function execute(
   }
 
   // Security: resolve and verify the output path stays within the project directory
-  const { resolve } = await import("node:path");
   const resolvedOutput = resolve(outputPath);
   const resolvedProject = resolve(projectPath);
   if (!resolvedOutput.startsWith(resolvedProject + "/") && resolvedOutput !== resolvedProject) {
@@ -90,23 +89,27 @@ export async function execute(
   try {
     existing = await readFile(outputPath, "utf-8");
   } catch {
-    // File doesn't exist yet, start fresh
+    // File doesn't exist yet
   }
 
-  // Safeguard: detect if content contains the existing text (LLM sent full doc instead of delta)
+  // Detect if content contains the existing text (LLM sent full doc instead of delta)
   if (existing.length > 0 && content.includes(existing.trim())) {
-    // LLM sent the full accumulated document — use it as-is instead of appending
     await writeFile(outputPath, content, "utf-8");
   } else {
     const separator = existing.length > 0 ? "\n\n" : "";
     await writeFile(outputPath, existing + separator + content, "utf-8");
   }
 
-  // Update active workflow output file reference and track saved step
-  if (active) {
-    active.outputFile = outputPath;
-    active.lastSavedStep = active.currentStep;
-    await writeState(projectPath, state);
+  // Sync to Convex: update outputFile + lastSavedStep in metadata
+  if (active?.workflowRunId) {
+    await updateProgress({
+      workflowId: active.workflowRunId,
+      currentStep: active.currentStep,
+      metadata: {
+        outputFile: outputPath,
+        lastSavedStep: active.currentStep,
+      },
+    });
   }
 
   const relPath = outputPath.startsWith(projectPath)
@@ -115,7 +118,7 @@ export async function execute(
 
   return text(
     `✅ Artifact saved: \`${relPath}\` (${content.length} bytes)\n\n` +
-      `${state.activeWorkflow ? `Step ${state.activeWorkflow.currentStep} output persisted.` : "Output persisted."}`
+      `${active ? `Step ${active.currentStep} output persisted.` : "Output persisted."}`
   );
 }
 
