@@ -205,6 +205,7 @@ After completing each step:
     "",
     "---",
     "",
+    `**IMPORTANT:** After calling \`sessions_spawn\`, immediately call \`bmad_register_session\` with projectPath="${projectPath}" and the sessionKey returned by sessions_spawn. This links the chat to the dashboard.`,
     `**After each step:** Call \`bmad_save_artifact\` with projectPath="${projectPath}" to save output, then \`bmad_load_step\` with projectPath="${projectPath}" for the next step.`,
     `**Final step:** Call \`bmad_save_artifact\`, then \`bmad_complete_workflow\` with projectPath="${projectPath}".`,
     `**Do NOT start additional workflows.** Complete this one and stop.`,

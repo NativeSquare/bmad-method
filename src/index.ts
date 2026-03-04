@@ -22,6 +22,7 @@ import * as bmadLoadStep from "./tools/bmad-load-step.ts";
 import * as bmadSaveArtifact from "./tools/bmad-save-artifact.ts";
 import * as bmadCompleteWorkflow from "./tools/bmad-complete-workflow.ts";
 import * as bmadGetState from "./tools/bmad-get-state.ts";
+import * as bmadRegisterSession from "./tools/bmad-register-session.ts";
 /** All tool modules */
 const TOOLS = [
   bmadInitProject,
@@ -31,6 +32,7 @@ const TOOLS = [
   bmadSaveArtifact,
   bmadCompleteWorkflow,
   bmadGetState,
+  bmadRegisterSession,
 ] as const;
 
 /**
