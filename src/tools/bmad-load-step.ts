@@ -47,6 +47,7 @@ export async function execute(
   // Variable resolution map
   const vars: Record<string, string> = {
     "project-root": projectPath,
+    date: new Date().toISOString().split("T")[0],
     project_name: state.projectName,
     user_name: "User",
     communication_language: "english",

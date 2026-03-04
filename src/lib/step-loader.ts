@@ -57,7 +57,8 @@ export async function countSteps(stepsDir: string): Promise<number> {
   // Count only primary steps, not variants (step-01b, step-v-02b, etc.)
   // Primary: step-01-foo.md, step-v-01-foo.md, step-e-01-foo.md
   // Variant: step-01b-foo.md, step-v-02b-foo.md
-  return files.filter((f) => /^step-(?:[a-z]+-)?(\d+)(?:-|\.md$)/.test(f))
+  // Exclude branch variants like step-01b-continue.md (letter immediately after digits)
+  return files.filter((f) => /^step-(?:[a-z]+-)?(\d+)(?:-[^a-z]|-[a-z]{2,}|\.md$)/.test(f) && !/^step-(?:[a-z]+-)?(\d+)[a-z]-/.test(f))
     .length;
 }
 
