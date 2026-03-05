@@ -204,3 +204,27 @@ export async function failWorkflow(params: {
     error: params.error,
   });
 }
+
+/**
+ * Transition storyRuns for a project from one status to another.
+ * Used by bmad_complete_workflow to auto-advance storyRun status.
+ */
+export async function transitionStoryRuns(
+  projectPath: string,
+  fromStatus: string,
+  toStatus: string,
+  storyKey?: string,
+): Promise<number> {
+  const result = await post("/api/story-runs/list", { projectPath });
+  const runs = result?.runs || [];
+  let updated = 0;
+  for (const run of runs) {
+    if (run.status !== fromStatus) continue;
+    if (storyKey && !run.storyKey.includes(storyKey)) continue;
+    await post("/api/story-runs/progress", { id: run._id, status: toStatus });
+    updated++;
+    // If no storyKey filter, only transition one at a time
+    if (!storyKey) break;
+  }
+  return updated;
+}

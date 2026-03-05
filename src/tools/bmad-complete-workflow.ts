@@ -4,7 +4,7 @@
  */
 
 import { Type } from "@sinclair/typebox";
-import { readState, completeWorkflow, updatePhase } from "../lib/convex-state.ts";
+import { readState, completeWorkflow, updatePhase, transitionStoryRuns } from "../lib/convex-state.ts";
 import { getAvailableWorkflows, getWorkflow } from "../lib/workflow-registry.ts";
 import type { BmadPhase, ToolResult } from "../types.ts";
 
@@ -80,6 +80,26 @@ export async function execute(
     }
   }
 
+  // Auto-transition storyRuns based on completed workflow type
+  const STORY_RUN_TRANSITIONS: Record<string, { from: string; to: string }> = {
+    "create-story": { from: "generating", to: "generated" },
+    "dev-story": { from: "developing", to: "reviewing" },
+    "code-review": { from: "reviewing", to: "testing" },
+    "qa-generate-e2e-tests": { from: "testing", to: "done" },
+  };
+  const storyTransition = STORY_RUN_TRANSITIONS[active.id];
+  let storyRunUpdateMsg = "";
+  if (storyTransition) {
+    try {
+      const count = await transitionStoryRuns(params.projectPath, storyTransition.from, storyTransition.to);
+      if (count > 0) {
+        storyRunUpdateMsg = `📊 Updated ${count} story run(s): ${storyTransition.from} → ${storyTransition.to}`;
+      }
+    } catch (e) {
+      // Non-fatal
+    }
+  }
+
   // Suggest next workflows
   const completedIds = [...state.completedWorkflows.map((w) => w.id), active.id];
   const available = getAvailableWorkflows(completedIds).filter(
@@ -94,6 +114,11 @@ export async function execute(
     `**Duration:** started ${active.startedAt}`,
     "",
   ];
+
+  if (storyRunUpdateMsg) {
+    lines.push(storyRunUpdateMsg);
+    lines.push("");
+  }
 
   if (available.length > 0) {
     lines.push("## Recommended Next Steps");
