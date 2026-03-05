@@ -12,6 +12,36 @@
   <critical>Do NOT schedule a "next session" or request review pauses unless a HALT condition applies. Only Step 6 decides completion.</critical>
   <critical>User skill level ({user_skill_level}) affects conversation style ONLY, not code updates.</critical>
 
+  <step n="0" goal="Load relevant OpenClaw skills based on story type">
+    <critical>Load skills BEFORE implementation to ensure correct patterns and conventions are followed</critical>
+    <action>If {{story_path}} is known, read the story file and extract the storyType field (frontend | backend | fullstack)</action>
+    <action>If {{story_path}} is not yet known, defer skill loading to after step 1 (re-enter this step after story is loaded)</action>
+
+    <check if="storyType == 'frontend' OR storyType == 'fullstack'">
+      <action>Load these OpenClaw skills by reading their SKILL.md files:
+        - building-native-ui
+        - frontend-design
+        - expo-dev-client (if Expo project)
+        - native-data-fetching
+        - use-dom (if applicable)
+      </action>
+    </check>
+
+    <check if="storyType == 'backend' OR storyType == 'fullstack'">
+      <action>Load these OpenClaw skills by reading their SKILL.md files:
+        - convex-guidelines
+      </action>
+    </check>
+
+    <action>Always load the test-master skill (read its SKILL.md) — testing is required for all story types</action>
+    <action>Load specific test-master references as needed:
+      - Unit testing: references/unit-testing.md
+      - E2E (web): references/e2e-testing.md
+      - E2E (mobile): references/maestro-e2e.md
+      - TDD patterns: references/tdd-iron-laws.md
+    </action>
+  </step>
+
   <step n="1" goal="Find next ready story and load it" tag="sprint-status">
     <check if="{{story_path}} is provided">
       <action>Use {{story_path}} directly</action>

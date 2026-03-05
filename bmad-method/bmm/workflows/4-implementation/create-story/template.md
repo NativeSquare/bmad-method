@@ -1,6 +1,7 @@
 # Story {{epic_num}}.{{story_num}}: {{story_title}}
 
 Status: ready-for-dev
+Story Type: {{story_type}} <!-- frontend | backend | fullstack -->
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

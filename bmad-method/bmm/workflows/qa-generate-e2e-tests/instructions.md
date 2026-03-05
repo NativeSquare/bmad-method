@@ -6,7 +6,20 @@
 
 ## Instructions
 
-### Step 0: Detect Test Framework
+### Step 0a: Load Relevant OpenClaw Skills
+
+Before generating any tests, load the appropriate skills based on what you're testing:
+
+1. **Always** load the `test-master` skill (read its SKILL.md) — this is your primary testing reference
+2. Read the story file (if provided) and extract the `storyType` field (frontend | backend | fullstack)
+3. Based on storyType or project analysis:
+   - **Mobile E2E (Expo/React Native)** → load `test-master/references/maestro-e2e.md` for Maestro patterns
+   - **Web E2E** → load `test-master/references/e2e-testing.md` for Playwright patterns
+   - **Unit tests** → load `test-master/references/unit-testing.md`
+   - **Backend (Convex)** → load `convex-guidelines` skill for backend patterns
+4. Load relevant references from test-master based on what tests you'll write
+
+### Step 0b: Detect Test Framework
 
 Check project for existing test framework:
 

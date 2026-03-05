@@ -302,6 +302,13 @@
   <step n="5" goal="Create comprehensive story file">
     <critical>📝 CREATE ULTIMATE STORY FILE - The developer's master implementation guide!</critical>
 
+    <action>Determine the story_type based on analysis of the story's tasks and scope:
+      - "frontend" → UI components, screens, navigation, styling only (no backend changes)
+      - "backend" → Convex schema, queries, mutations, actions, API endpoints only (no UI changes)
+      - "fullstack" → Both frontend and backend changes required
+      Set {{story_type}} accordingly. This field is critical — the DEV, Review, and QA agents use it to load the correct OpenClaw skills.
+    </action>
+
     <action>Initialize from template.md:
     {default_output_file}</action>
     <template-output file="{default_output_file}">story_header</template-output>

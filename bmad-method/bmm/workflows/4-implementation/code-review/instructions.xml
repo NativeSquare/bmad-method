@@ -15,6 +15,29 @@
   <critical>Do not review files that are not part of the application's source code. Always exclude the _bmad/ and _bmad-output/ folders from the review. Always exclude IDE and CLI configuration folders like .cursor/ and .windsurf/ and .claude/</critical>
 
 
+  <step n="0" goal="Load relevant OpenClaw skills based on story type">
+    <critical>Load skills BEFORE review to ensure correct patterns and conventions are validated</critical>
+    <action>Read the story file ({{story_path}}) and extract the storyType field (frontend | backend | fullstack)</action>
+
+    <check if="storyType == 'frontend' OR storyType == 'fullstack'">
+      <action>Load these OpenClaw skills by reading their SKILL.md files:
+        - building-native-ui
+        - frontend-design
+        - expo-dev-client (if Expo project)
+        - native-data-fetching
+        - use-dom (if applicable)
+      </action>
+    </check>
+
+    <check if="storyType == 'backend' OR storyType == 'fullstack'">
+      <action>Load these OpenClaw skills by reading their SKILL.md files:
+        - convex-guidelines
+      </action>
+    </check>
+
+    <action>Always load the test-master skill (read its SKILL.md) — review must validate test quality</action>
+  </step>
+
   <step n="1" goal="Load story and discover changes">
     <action>Use provided {{story_path}} or ask user which story file to review</action>
     <action>Read COMPLETE story file</action>
