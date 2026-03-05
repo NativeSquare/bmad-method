@@ -42,7 +42,28 @@ export async function execute(
     return text("Error: Project not initialized.");
   }
   if (!state.activeWorkflow) {
-    return text("Error: No active workflow to complete.");
+    // No active workflow — but still try to transition storyRuns (sub-agent pipeline mode)
+    const storyTransitions: Record<string, { from: string; to: string }> = {
+      "create-story": { from: "generating", to: "generated" },
+      "dev-story": { from: "developing", to: "reviewing" },
+      "code-review": { from: "reviewing", to: "testing" },
+      "qa-generate-e2e-tests": { from: "testing", to: "done" },
+    };
+    // Try all transitions — whichever matches the current storyRun status will fire
+    let transitioned = false;
+    for (const [wfId, tr] of Object.entries(storyTransitions)) {
+      try {
+        const count = await transitionStoryRuns(params.projectPath, tr.from, tr.to);
+        if (count > 0) {
+          transitioned = true;
+          return text(`✅ Pipeline step complete — ${count} story run(s) transitioned: ${tr.from} → ${tr.to}`);
+        }
+      } catch {}
+    }
+    if (!transitioned) {
+      return text("No active workflow and no matching story runs to transition. Nothing to do.");
+    }
+    return text("Done.");
   }
 
   const active = state.activeWorkflow;

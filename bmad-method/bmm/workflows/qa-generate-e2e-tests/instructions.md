@@ -121,3 +121,9 @@ If the project needs:
 Save summary to: `{implementation_artifacts}/tests/test-summary.md`
 
 **Done!** Tests generated and verified.
+
+## Signal Pipeline Completion
+
+**CRITICAL — This step MUST execute.**
+
+Call `bmad_complete_workflow` with the projectPath of this project. This updates the story run status in Convex and triggers the next pipeline step automatically. If the tool fails or is unavailable, this is non-fatal — log and continue.

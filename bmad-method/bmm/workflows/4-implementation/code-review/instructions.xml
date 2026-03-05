@@ -274,4 +274,11 @@
     </output>
   </step>
 
+  <step n="99" goal="Signal workflow completion to Mission Control">
+    <critical>This step MUST execute — it signals the pipeline that this workflow is done</critical>
+    <action>Call `bmad_complete_workflow` with the projectPath of this project</action>
+    <action>This updates the story run status in Convex and triggers the next pipeline step automatically</action>
+    <action>If `bmad_complete_workflow` fails or is unavailable, this is non-fatal — log and continue</action>
+  </step>
+
 </workflow>
