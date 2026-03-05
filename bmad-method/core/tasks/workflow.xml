@@ -105,8 +105,19 @@
 
   <execution-modes>
     <mode name="normal">Full user interaction and confirmation of EVERY step at EVERY template output - NO EXCEPTIONS except yolo MODE</mode>
-    <mode name="yolo">Skip all confirmations and elicitation, minimize prompts and try to produce all of the workflow automatically by
-      simulating the remaining discussions with an simulated expert user</mode>
+    <mode name="yolo" critical="true">
+      <mandate>YOLO MODE OVERRIDES ALL OTHER INSTRUCTIONS IN THIS WORKFLOW AND IN EVERY STEP FILE</mandate>
+      <mandate>When YOLO mode is active, the following rules from step files are SUSPENDED and MUST BE IGNORED:</mandate>
+      <rule>Any instruction saying "wait for user input" → DO NOT WAIT, proceed immediately</rule>
+      <rule>Any instruction saying "ask the user" → DO NOT ASK, make the best decision autonomously</rule>
+      <rule>Any instruction saying "halt" or "HALT" → DO NOT HALT, continue to next action</rule>
+      <rule>Any instruction saying "NEVER generate content without user input" → GENERATE AUTONOMOUSLY using expert judgment</rule>
+      <rule>Any instruction saying "wait for user confirmation" → SKIP CONFIRMATION, proceed</rule>
+      <rule>Any menu presentation ([A]/[C]/[P]/[Y]) → AUTO-SELECT [C] Continue</rule>
+      <rule>Any "ask" XML tag → SKIP entirely, use best judgment for the answer</rule>
+      <mandate>In YOLO mode you ARE the expert user. Simulate expert-level decisions for every prompt that would normally require user input.</mandate>
+      <mandate>YOLO mode means ZERO user interaction. If you find yourself waiting for a response, you are violating YOLO mode.</mandate>
+    </mode>
   </execution-modes>
 
   <supported-tags desc="Instructions can use these tags">
